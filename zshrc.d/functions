@@ -1,0 +1,62 @@
+# Z-shell functions
+
+# ls with numerical permissions
+function ll {
+  ls -l "$@" | awk '{k=0;s=0;for( i = 0; i <= 8; i++ ){k+=((substr($1,i+2,1) ~ /[rwxst]/)*2^(8-i))}
+                j=4;for(i=4;i<=10;i+=3){s+=((substr($1,i,1) ~ /[stST]/)*j);j/=2}
+                if(k){printf("%0o%0o ",s,k )}; print
+                }'
+}
+
+# cat file with word highlighting
+function gcat {
+  grep -E --color "$1|$" "${@:2}"
+}
+
+
+# Soft connect to remote desktop from CLI
+function rdp () {
+  local USAGE="Usage: rdp [IP-address]"
+  if [ $# -eq 1 ]; then
+    if [[ (-n $1) && ($1 =~ ^([[:digit:]]{1,3}\.){3}[[:digit:]]{1,3}$) ]]; then
+      read -p "Your username: " username
+      read -p "Domain: " domain
+      read -t 10 -sp "Password: " password
+      if [ -z $domain ]; then
+        command xfreerdp /size:1920x1000 /gfx:AVC444 /v:$1 /u:$username /p:$password +clipboard "${@:2}"
+      else
+        command xfreerdp /size:1920x1000 /gfx:AVC444 /v:$1 /u:$username /p:$password /d:$domain +clipboard "${@:2}"
+      fi
+    else
+      echo $USAGE >&2
+      return 1
+    fi
+  else
+    echo $USAGE >&2
+    return 1
+  fi
+}
+
+# Activate or deactivate kubernetes cluster info in prompt
+function kps1 () {
+  if [ "$#" -ne 1 ]; then
+    echo "Wrong parametres count, try '-h | --help'"
+    return 1
+  fi
+  if [[ "${1}" == "-h" || "${1}" == "--help" ]]; then
+    cat <<USAGE
+Activate or deactivate kubernetes cluster info in z-shell prompt
+Usage: kps1 [on | off]
+USAGE
+  elif [[ "${1}" == "on" ]]; then
+    export KUBE_PS1_STATUS="true"
+  elif [[ "${1}" == "off" ]]; then
+    export KUBE_PS1_STATUS="false"
+  else
+    echo "Error: unrecognized flag ${1}" >&2
+    return 1
+  fi
+}
+
+# vi:syntax=zsh
+# vi:ft=zsh

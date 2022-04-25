@@ -1,0 +1,99 @@
+# Z-shell prompt
+
+# Use variables in prompt feature
+setopt prompt_subst
+
+autoload -U colors && colors
+# Font colors
+C_FG_WHITE="%{$fg[white]%}"
+C_FG_BLACK="%{$fg[black]%}"
+C_FG_GREEN="%{$fg[green]%}"
+C_FG_BLUE="%{$fg[blue]%}"
+C_FG_CYAN="%{$fg[cyan]%}"
+C_FG_MAGENTA="%{$fg[magenta]%}"
+C_FG_RED="%{$fg[red]%}"
+C_FG_YELLOW="%{$fg[yellow]%}"
+# Background colors
+C_BG_WHITE="%{$bg[white]%}"
+C_BG_BLACK="%{$bg[black]%}"
+C_BG_GREEN="%{$bg[green]%}"
+C_BG_BLUE="%{$bg[blue]%}"
+C_BG_CYAN="%{$bg[cyan]%}"
+C_BG_MAGENTA="%{$bg[magenta]%}"
+C_BG_RED="%{$bg[red]%}"
+C_BG_YELLOW="%{$bg[yellow]%}"
+# Load nerd icos
+# https://www.nerdfonts.com/cheat-sheet
+APPLE_ICO=$'\uf302 '
+GIT_ICO=$'\uf7a1 '
+HOME_ICO=$'\uf015 '
+LOCK_ICO=$'\uf023 '
+PY_ICO=$'\ue73c '
+SUCCESS_ICO=$'\uf00c '
+FAIL_ICO=$'\uf00d '
+KUBE_ICO=$'\u2388 '
+PLAY_ICO=$'\uf04b '
+
+C_RESET="%{$reset_color%}"
+NEW_LINE=$'\n'
+
+if [ "$(id -u)" -eq 0 ]; then
+  C_FG_MAIN="${C_FG_RED}"
+  C_BG_MAIN="${C_BG_RED}"
+else
+  C_FG_MAIN="${C_FG_BLUE}"
+  C_BG_MAIN="${C_BG_BLUE}"
+fi
+
+function zsh_prompt_command {
+  local LAST_COMMAND=$?
+  local GIT_PS1=
+  local VENV_PS1=
+  local LOGI_WORKDIR=
+  # which doesn't even set an exit status
+  if command which git >/dev/null; then
+    local GIT_BRANCH
+    local GIT_CLEAR
+    GIT_BRANCH=$(command git rev-parse --abbrev-ref HEAD 2> /dev/null)
+    if [[ ! -z ${GIT_BRANCH} ]]; then
+      GIT_STATUS=$(command git status --porcelain 2>/dev/null)
+      [[ -n ${GIT_STATUS} ]] && GIT_CLEAR=0 || GIT_CLEAR=1
+      if [ "${GIT_CLEAR}" -eq 0 ]; then
+        GIT_PS1="${C_FG_YELLOW}${GIT_ICO}${C_FG_RED}${GIT_BRANCH}${C_RESET}"
+      else
+        GIT_PS1="${C_FG_YELLOW}${GIT_ICO}${C_FG_GREEN}${GIT_BRANCH}${C_RESET}"
+      fi
+    fi
+  fi
+  if [ -r $PWD ] && [ -w $PWD ] && [ -x $PWD ]; then
+    LOGI_WORKDIR="${C_FG_BLUE}${HOME_ICO}${C_RESET}"
+  else
+    LOGI_WORKDIR="${C_FG_BLUE}${LOCK_ICO}${C_RESET}"
+  fi
+
+  local KUBE_PS1=
+  if [[ -n "${KUBE_PS1_STATUS}" && "${KUBE_PS1_STATUS}" == "true" ]]; then # $KUBE_PS1_STATUS must be defined with 'kps1' function
+    local KUBE_CTX=$(kubectx --current)
+    local KUBE_NS=$(kubens --current)
+    KUBE_PS1="${C_FG_MAGENTA}${KUBE_ICO}${C_RESET}${C_FG_CYAN}${KUBE_CTX}${C_RESET}:${C_FG_CYAN}${KUBE_NS}${C_RESET}"
+  fi
+
+  if [[ ${LAST_COMMAND} == 0 ]]; then
+    export RIGHTPS="${C_FG_GREEN}${SUCCESS_ICO}${C_RESET}[%T]"
+  else
+    export RIGHTPS="${C_FG_RED}%? ${FAIL_ICO}${C_RESET}[%T]"
+  fi
+  [[ -n "${VIRTUAL_ENV}" ]] && VENV_PS1="${C_FG_YELLOW}${PY_ICO}${C_FG_CYAN}${VIRTUAL_ENV##*/}${C_RESET}"
+  export PROMPT="${LOGI_WORKDIR}${C_FG_YELLOW} %~ ${C_FG_MAIN}%n${APPLE_ICO}%m${C_RESET} ${GIT_PS1} ${KUBE_PS1} ${VENV_PS1}${NEW_LINE}${C_FG_BLUE}${PLAY_ICO}${C_RESET} "
+  export RPROMPT="${RIGHTPS}"
+}
+
+ZSH_PROMPT_COMMAND=zsh_prompt_command
+PS2="${C_FG_MAIN} ➜ ${C_RESET}"
+
+precmd() {
+  eval "$ZSH_PROMPT_COMMAND"
+}
+
+# vi:syntax=zsh
+# vi:ft=zsh
